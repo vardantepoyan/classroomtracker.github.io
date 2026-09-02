@@ -233,6 +233,29 @@
             font-size: 0.9rem;
         }
 
+        .storage-status {
+            text-align: center;
+            font-size: 0.78rem;
+            padding: 7px 10px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+
+        .storage-status-ok {
+            color: #059669;
+            background-color: #ecfdf5;
+        }
+
+        .storage-status-error {
+            color: #dc2626;
+            background-color: #fef2f2;
+        }
+
+        .storage-status-checking {
+            color: #64748b;
+            background-color: #f1f5f9;
+        }
+
         .save-btn {
             width: 100%;
             max-width: 480px;
@@ -372,6 +395,7 @@
         <div class="header-top">
             <h1>Class Tracker</h1>
         </div>
+        <div id="storageStatus" class="storage-status storage-status-checking">Checking storage…</div>
         <div class="controls-row">
             <select id="viewSelect" class="lesson-select" onchange="switchView(this.value)">
                 <option value="tracker">Lesson Tracker</option>
@@ -417,10 +441,26 @@
         let currentView = 'tracker';
         let expandedStudent = null;
 
+        function setStorageStatus(message, state) {
+            const el = document.getElementById('storageStatus');
+            if (!el) return;
+            el.textContent = message;
+            el.className = 'storage-status storage-status-' + state;
+        }
+
+        function storageAvailable() {
+            return typeof window !== 'undefined' &&
+                   window.storage &&
+                   typeof window.storage.get === 'function' &&
+                   typeof window.storage.set === 'function';
+        }
+
         async function loadData() {
-            // Retries a couple of times in case the very first read races
-            // with the storage bridge initializing. Returns true only if
-            // existing saved data was actually found and loaded.
+            if (!storageAvailable()) {
+                setStorageStatus('⚠ Storage is not available in this view — nothing will be saved here.', 'error');
+                return false;
+            }
+
             const maxAttempts = 3;
             for (let attempt = 1; attempt <= maxAttempts; attempt++) {
                 try {
@@ -429,6 +469,9 @@
                         const parsed = JSON.parse(result.value);
                         appData.lessons = parsed.lessons || {};
                         currentLesson = parsed.currentLesson || "1";
+                        setStorageStatus('✓ Loaded your saved data', 'ok');
+                    } else {
+                        setStorageStatus('✓ Storage connected — no saved data yet', 'ok');
                     }
                     return true;
                 } catch (err) {
@@ -436,6 +479,7 @@
                         await new Promise(resolve => setTimeout(resolve, 300));
                     } else {
                         console.error('Failed to load class tracker data after retries:', err);
+                        setStorageStatus('⚠ Could not read saved data: ' + (err && err.message ? err.message : err), 'error');
                         return false;
                     }
                 }
@@ -444,16 +488,25 @@
         }
 
         async function saveData() {
+            if (!storageAvailable()) {
+                setStorageStatus('⚠ Storage is not available — this change was NOT saved.', 'error');
+                return false;
+            }
             try {
                 const result = await window.storage.set(STORAGE_KEY, JSON.stringify({
                     lessons: appData.lessons,
                     currentLesson: currentLesson
                 }), false);
                 if (!result) {
-                    console.error('Storage set returned no result');
+                    setStorageStatus('⚠ Save did not confirm — this change may not have been saved.', 'error');
+                    return false;
                 }
+                setStorageStatus('✓ Synced', 'ok');
+                return true;
             } catch (err) {
                 console.error('Failed to save class tracker data:', err);
+                setStorageStatus('⚠ Save failed: ' + (err && err.message ? err.message : err), 'error');
+                return false;
             }
         }
 
@@ -709,11 +762,6 @@
             attachSummaryListeners();
             renderRoster();
             switchView('tracker');
-            // Note: intentionally NOT saving here. Writing back to storage
-            // on every load risks overwriting real saved data with an empty
-            // scaffold if the load itself hit a transient hiccup. Data is
-            // only written when the user actually makes a change (a toggle,
-            // a score change, a lesson switch, or the Save Lesson button).
         }
 
         initApp();

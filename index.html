@@ -169,7 +169,7 @@
         .score-section {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
         }
 
         .score-circle {
@@ -208,6 +208,7 @@
             align-items: center;
             cursor: pointer;
             touch-action: manipulation;
+            padding: 0;
         }
 
         .btn-plus {
@@ -223,6 +224,13 @@
 
         .btn-circle:active {
             transform: scale(0.9);
+        }
+
+        .loading-msg {
+            text-align: center;
+            color: #94a3b8;
+            padding: 32px 0;
+            font-size: 0.9rem;
         }
     </style>
 </head>
@@ -240,17 +248,20 @@
         </div>
     </header>
 
-    <div class="container" id="roster"></div>
+    <div class="container" id="roster">
+        <div class="loading-msg">Loading…</div>
+    </div>
 
     <script>
         const studentNames = [
-            "Isaac Badman", "Sofia Castillo", "Allora Chaudhari", 
-            "Kenjisan Limketkai", "Aanya Minnah", "Diya Rajendran", 
+            "Isaac Badman", "Sofia Castillo", "Allora Chaudhari",
+            "Kenjisan Limketkai", "Aanya Minnah", "Diya Rajendran",
             "Ethan Shen", "Ryan Shih", "Scarlett Yi", "Ella Zubov"
         ];
 
         const TOTAL_LESSONS = 36;
-        
+        const STORAGE_KEY = 'classTrackerState';
+
         function createEmptyLessonData() {
             const data = {};
             studentNames.forEach(name => {
@@ -259,106 +270,160 @@
             return data;
         }
 
-        let appData = JSON.parse(localStorage.getItem('lessonsTrackerData')) || {};
-        let currentLesson = localStorage.getItem('currentSelectedLesson') || "1";
+        let appData = { lessons: {} };
+        let currentLesson = "1";
 
-        function initApp() {
+        async function loadData() {
+            try {
+                const result = await window.storage.get(STORAGE_KEY, false);
+                if (result && result.value) {
+                    const parsed = JSON.parse(result.value);
+                    appData.lessons = parsed.lessons || {};
+                    currentLesson = parsed.currentLesson || "1";
+                }
+            } catch (err) {
+                // No saved state yet (or a read error) - start fresh
+                appData.lessons = {};
+                currentLesson = "1";
+            }
+        }
+
+        async function saveData() {
+            try {
+                const result = await window.storage.set(STORAGE_KEY, JSON.stringify({
+                    lessons: appData.lessons,
+                    currentLesson: currentLesson
+                }), false);
+                if (!result) {
+                    console.error('Storage set returned no result');
+                }
+            } catch (err) {
+                console.error('Failed to save class tracker data:', err);
+            }
+        }
+
+        function ensureAllLessonsExist() {
+            for (let i = 1; i <= TOTAL_LESSONS; i++) {
+                if (!appData.lessons[i]) {
+                    appData.lessons[i] = createEmptyLessonData();
+                }
+            }
+        }
+
+        function populateLessonSelect() {
             const selectEl = document.getElementById('lessonSelect');
-            selectEl.innerHTML = ''; 
+            selectEl.innerHTML = '';
             for (let i = 1; i <= TOTAL_LESSONS; i++) {
                 const opt = document.createElement('option');
                 opt.value = i;
                 opt.innerText = 'Lesson ' + i;
-                if (String(i) === currentLesson) opt.selected = true;
+                if (String(i) === String(currentLesson)) opt.selected = true;
                 selectEl.appendChild(opt);
             }
-
-            for (let i = 1; i <= TOTAL_LESSONS; i++) {
-                if (!appData[i]) {
-                    appData[i] = createEmptyLessonData();
-                }
-            }
-            saveData();
-            renderRoster();
         }
 
-        function saveData() {
-            localStorage.setItem('lessonsTrackerData', JSON.stringify(appData));
-            localStorage.setItem('currentSelectedLesson', currentLesson);
-        }
-
-        function switchLesson(lessonNum) {
+        async function switchLesson(lessonNum) {
             currentLesson = lessonNum;
-            saveData();
+            await saveData();
             renderRoster();
         }
 
-        function updateAttendance(name, isChecked) {
-            appData[currentLesson][name].present = isChecked;
-            saveData();
+        async function updateAttendance(name, isChecked) {
+            appData.lessons[currentLesson][name].present = isChecked;
+            await saveData();
         }
 
-        function updateNotebook(name, isChecked) {
-            appData[currentLesson][name].notebook = isChecked;
-            saveData();
+        async function updateNotebook(name, isChecked) {
+            appData.lessons[currentLesson][name].notebook = isChecked;
+            await saveData();
         }
 
-        function changeScore(name, amount) {
-            let currentScore = appData[currentLesson][name].score;
-            if (currentScore + amount >= 0) {
-                appData[currentLesson][name].score += amount;
-                saveData();
+        async function changeScore(name, amount) {
+            const record = appData.lessons[currentLesson][name];
+            if (record.score + amount >= 0) {
+                record.score += amount;
+                await saveData();
                 renderRoster();
             }
         }
 
-        function resetCurrentLesson() {
+        async function resetCurrentLesson() {
             if (confirm('Reset all marks and scores ONLY for Lesson ' + currentLesson + '?')) {
-                appData[currentLesson] = createEmptyLessonData();
-                saveData();
+                appData.lessons[currentLesson] = createEmptyLessonData();
+                await saveData();
                 renderRoster();
             }
         }
 
         function renderRoster() {
             const rosterDiv = document.getElementById('roster');
-            rosterDiv.innerHTML = ''; 
+            const lessonRecords = appData.lessons[currentLesson];
 
-            const lessonRecords = appData[currentLesson];
-
-            studentNames.forEach(name => {
+            rosterDiv.innerHTML = studentNames.map(name => {
                 const data = lessonRecords[name];
                 const scoreClass = data.score > 0 ? 'score-circle has-points' : 'score-circle';
-                
-                let cardHtml = '<div class="student-card">';
-                cardHtml += '  <div class="student-info">';
-                cardHtml += '    <div class="student-name">' + name + '</div>';
-                cardHtml += '    <div class="toggles">';
-                cardHtml += '      <label class="circle-label present">';
-                cardHtml += '        <input type="checkbox" ' + (data.present ? 'checked' : '') + ' onchange="updateAttendance(\'' + name + '\', this.checked)">';
-                cardHtml += '        <span class="checkbox-circle"></span> Present';
-                cardHtml += '      </label>';
-                cardHtml += '      <label class="circle-label notebook">';
-                cardHtml += '        <input type="checkbox" ' + (data.notebook ? 'checked' : '') + ' 
-                onchange="updateNotebook('' + name + '', this.checked)">';
-                cardHtml += '         Notebook';
-                cardHtml += '      ';
-                cardHtml += '    ';
-                cardHtml += '  ';
-                cardHtml += '  ';
-                cardHtml += '    ' + data.score + '';
-                cardHtml += '    ';
-                cardHtml += '      +';
-                cardHtml += '      -';
-                cardHtml += '    ';
-                cardHtml += '  ';
-                cardHtml += '';
 
-                
-                rosterDiv.innerHTML += cardHtml;
+                return `
+                    <div class="student-card">
+                        <div class="student-info">
+                            <div class="student-name">${name}</div>
+                            <div class="toggles">
+                                <label class="circle-label present">
+                                    <input type="checkbox" data-action="attendance" data-name="${name}" ${data.present ? 'checked' : ''}>
+                                    <span class="checkbox-circle"></span> Present
+                                </label>
+                                <label class="circle-label notebook">
+                                    <input type="checkbox" data-action="notebook" data-name="${name}" ${data.notebook ? 'checked' : ''}>
+                                    <span class="checkbox-circle"></span> Notebook
+                                </label>
+                            </div>
+                        </div>
+                        <div class="score-section">
+                            <div class="${scoreClass}">${data.score}</div>
+                            <div class="score-actions">
+                                <button type="button" class="btn-circle btn-plus" data-action="score-plus" data-name="${name}">+</button>
+                                <button type="button" class="btn-circle btn-minus" data-action="score-minus" data-name="${name}">&minus;</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function attachRosterListeners() {
+            const rosterDiv = document.getElementById('roster');
+
+            rosterDiv.addEventListener('change', (e) => {
+                const target = e.target;
+                const name = target.dataset.name;
+                if (target.dataset.action === 'attendance') {
+                    updateAttendance(name, target.checked);
+                } else if (target.dataset.action === 'notebook') {
+                    updateNotebook(name, target.checked);
+                }
+            });
+
+            rosterDiv.addEventListener('click', (e) => {
+                const btn = e.target.closest('button[data-action]');
+                if (!btn) return;
+                const name = btn.dataset.name;
+                if (btn.dataset.action === 'score-plus') {
+                    changeScore(name, 1);
+                } else if (btn.dataset.action === 'score-minus') {
+                    changeScore(name, -1);
+                }
             });
         }
-        
+
+        async function initApp() {
+            await loadData();
+            ensureAllLessonsExist();
+            populateLessonSelect();
+            attachRosterListeners();
+            renderRoster();
+            await saveData();
+        }
+
         initApp();
     </script>
 </body>

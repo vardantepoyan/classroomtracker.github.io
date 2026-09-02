@@ -418,18 +418,29 @@
         let expandedStudent = null;
 
         async function loadData() {
-            try {
-                const result = await window.storage.get(STORAGE_KEY, false);
-                if (result && result.value) {
-                    const parsed = JSON.parse(result.value);
-                    appData.lessons = parsed.lessons || {};
-                    currentLesson = parsed.currentLesson || "1";
+            // Retries a couple of times in case the very first read races
+            // with the storage bridge initializing. Returns true only if
+            // existing saved data was actually found and loaded.
+            const maxAttempts = 3;
+            for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+                try {
+                    const result = await window.storage.get(STORAGE_KEY, false);
+                    if (result && result.value) {
+                        const parsed = JSON.parse(result.value);
+                        appData.lessons = parsed.lessons || {};
+                        currentLesson = parsed.currentLesson || "1";
+                    }
+                    return true;
+                } catch (err) {
+                    if (attempt < maxAttempts) {
+                        await new Promise(resolve => setTimeout(resolve, 300));
+                    } else {
+                        console.error('Failed to load class tracker data after retries:', err);
+                        return false;
+                    }
                 }
-            } catch (err) {
-                // No saved state yet (or a read error) - start fresh
-                appData.lessons = {};
-                currentLesson = "1";
             }
+            return false;
         }
 
         async function saveData() {
@@ -698,7 +709,11 @@
             attachSummaryListeners();
             renderRoster();
             switchView('tracker');
-            await saveData();
+            // Note: intentionally NOT saving here. Writing back to storage
+            // on every load risks overwriting real saved data with an empty
+            // scaffold if the load itself hit a transient hiccup. Data is
+            // only written when the user actually makes a change (a toggle,
+            // a score change, a lesson switch, or the Save Lesson button).
         }
 
         initApp();

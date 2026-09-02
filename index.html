@@ -30,7 +30,7 @@
             max-width: 480px;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
             margin-bottom: 16px;
         }
 
@@ -232,6 +232,138 @@
             padding: 32px 0;
             font-size: 0.9rem;
         }
+
+        .save-btn {
+            width: 100%;
+            max-width: 480px;
+            padding: 14px;
+            margin-top: 4px;
+            margin-bottom: 20px;
+            border: none;
+            border-radius: 14px;
+            background-color: var(--primary);
+            color: white;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.25);
+            transition: background-color 0.2s ease;
+        }
+
+        .save-btn.saved {
+            background-color: var(--present-color);
+            box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.25);
+        }
+
+        .save-btn:active {
+            transform: scale(0.98);
+        }
+
+        .summary-wrapper {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            overflow-x: auto;
+        }
+
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        .summary-table th {
+            background-color: #edf2f7;
+            color: var(--text-main);
+            font-weight: 700;
+            text-align: center;
+            padding: 10px 8px;
+        }
+
+        .summary-table th:first-child,
+        .summary-table td:first-child {
+            text-align: left;
+            padding-left: 12px;
+        }
+
+        .summary-table th:first-child {
+            border-radius: 10px 0 0 10px;
+        }
+
+        .summary-table th:last-child {
+            border-radius: 0 10px 10px 0;
+        }
+
+        .summary-table td {
+            text-align: center;
+            padding: 10px 8px;
+            border-bottom: 1px solid #edf2f7;
+        }
+
+        .summary-name {
+            font-weight: 600;
+        }
+
+        .summary-row {
+            cursor: pointer;
+        }
+
+        .summary-row:active {
+            background-color: #f8fafc;
+        }
+
+        .expand-arrow {
+            font-size: 0.65rem;
+            color: #94a3b8;
+            margin-left: 6px;
+        }
+
+        .detail-panel-row td {
+            padding: 0;
+            border-bottom: 1px solid #edf2f7;
+        }
+
+        .detail-panel {
+            max-height: 260px;
+            overflow-y: auto;
+            background-color: #f8fafc;
+            padding: 6px 10px;
+        }
+
+        .detail-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.78rem;
+        }
+
+        .detail-table th {
+            position: sticky;
+            top: 0;
+            background-color: #f8fafc;
+            color: #64748b;
+            font-weight: 600;
+            text-align: center;
+            padding: 4px 6px;
+        }
+
+        .detail-table td {
+            text-align: center;
+            padding: 4px 6px;
+            color: var(--text-main);
+        }
+
+        .detail-lesson {
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .summary-note {
+            text-align: center;
+            color: #94a3b8;
+            font-size: 0.8rem;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -241,6 +373,12 @@
             <h1>Class Tracker</h1>
         </div>
         <div class="controls-row">
+            <select id="viewSelect" class="lesson-select" onchange="switchView(this.value)">
+                <option value="tracker">Lesson Tracker</option>
+                <option value="summary">Summary — All Lessons</option>
+            </select>
+        </div>
+        <div class="controls-row" id="lessonControlsRow">
             <select id="lessonSelect" class="lesson-select" onchange="switchLesson(this.value)">
                 <!-- Handled via script -->
             </select>
@@ -251,6 +389,10 @@
     <div class="container" id="roster">
         <div class="loading-msg">Loading…</div>
     </div>
+
+    <button id="saveLessonBtn" class="save-btn" onclick="saveLessonExplicit()">Save Lesson</button>
+
+    <div class="container" id="summary" style="display:none;"></div>
 
     <script>
         const studentNames = [
@@ -272,6 +414,8 @@
 
         let appData = { lessons: {} };
         let currentLesson = "1";
+        let currentView = 'tracker';
+        let expandedStudent = null;
 
         async function loadData() {
             try {
@@ -355,6 +499,17 @@
             }
         }
 
+        async function saveLessonExplicit() {
+            const btn = document.getElementById('saveLessonBtn');
+            await saveData();
+            btn.textContent = 'Saved ✓';
+            btn.classList.add('saved');
+            setTimeout(() => {
+                btn.textContent = 'Save Lesson';
+                btn.classList.remove('saved');
+            }, 1500);
+        }
+
         function renderRoster() {
             const rosterDiv = document.getElementById('roster');
             const lessonRecords = appData.lessons[currentLesson];
@@ -390,6 +545,116 @@
             }).join('');
         }
 
+        function toggleStudentDetail(name) {
+            expandedStudent = (expandedStudent === name) ? null : name;
+            renderSummary();
+        }
+
+        function renderSummary() {
+            const summaryDiv = document.getElementById('summary');
+
+            const rows = studentNames.map(name => {
+                let presentCount = 0;
+                let notebookCount = 0;
+                let totalScore = 0;
+                const perLesson = [];
+
+                for (let i = 1; i <= TOTAL_LESSONS; i++) {
+                    const rec = appData.lessons[i] && appData.lessons[i][name];
+                    const present = rec ? rec.present : false;
+                    const notebook = rec ? rec.notebook : false;
+                    const score = rec ? rec.score : 0;
+                    if (present) presentCount++;
+                    if (notebook) notebookCount++;
+                    totalScore += score;
+                    perLesson.push({ lesson: i, present, notebook, score });
+                }
+
+                const isExpanded = expandedStudent === name;
+
+                const detailRows = perLesson.map(l => `
+                    <tr>
+                        <td class="detail-lesson">Lesson ${l.lesson}</td>
+                        <td>${l.present ? '✓' : '—'}</td>
+                        <td>${l.notebook ? '✓' : '—'}</td>
+                        <td>${l.score}</td>
+                    </tr>
+                `).join('');
+
+                const detailBlock = isExpanded ? `
+                    <tr class="detail-panel-row">
+                        <td colspan="4">
+                            <div class="detail-panel">
+                                <table class="detail-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Lesson</th>
+                                            <th>Present</th>
+                                            <th>Notebook</th>
+                                            <th>Score</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${detailRows}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                ` : '';
+
+                return `
+                    <tr class="summary-row" data-name="${name}">
+                        <td class="summary-name">${name}<span class="expand-arrow">${isExpanded ? '▲' : '▼'}</span></td>
+                        <td>${presentCount}/${TOTAL_LESSONS}</td>
+                        <td>${notebookCount}/${TOTAL_LESSONS}</td>
+                        <td>${totalScore}</td>
+                    </tr>
+                    ${detailBlock}
+                `;
+            }).join('');
+
+            summaryDiv.innerHTML = `
+                <div class="summary-wrapper">
+                    <table class="summary-table">
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Present</th>
+                                <th>Notebook</th>
+                                <th>Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rows}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="summary-note">Totals across all 36 lessons — tap a student for the lesson-by-lesson breakdown</div>
+            `;
+        }
+
+        function switchView(view) {
+            currentView = view;
+            const lessonControlsRow = document.getElementById('lessonControlsRow');
+            const rosterDiv = document.getElementById('roster');
+            const saveBtn = document.getElementById('saveLessonBtn');
+            const summaryDiv = document.getElementById('summary');
+
+            if (view === 'summary') {
+                lessonControlsRow.style.display = 'none';
+                rosterDiv.style.display = 'none';
+                saveBtn.style.display = 'none';
+                summaryDiv.style.display = 'block';
+                renderSummary();
+            } else {
+                lessonControlsRow.style.display = 'flex';
+                rosterDiv.style.display = 'block';
+                saveBtn.style.display = 'block';
+                summaryDiv.style.display = 'none';
+            }
+        }
+
         function attachRosterListeners() {
             const rosterDiv = document.getElementById('roster');
 
@@ -415,12 +680,24 @@
             });
         }
 
+        function attachSummaryListeners() {
+            const summaryDiv = document.getElementById('summary');
+
+            summaryDiv.addEventListener('click', (e) => {
+                const row = e.target.closest('.summary-row');
+                if (!row) return;
+                toggleStudentDetail(row.dataset.name);
+            });
+        }
+
         async function initApp() {
             await loadData();
             ensureAllLessonsExist();
             populateLessonSelect();
             attachRosterListeners();
+            attachSummaryListeners();
             renderRoster();
+            switchView('tracker');
             await saveData();
         }
 

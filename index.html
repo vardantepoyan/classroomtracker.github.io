@@ -3,365 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Classroom Tracker App</title>
+    <title>Class Tracker</title>
     <style>
-        :root {
-            --primary: #2563eb;
-            --primary-hover: #1d4ed8;
-            --bg: #f8fafc;
-            --card-bg: #ffffff;
-            --text: #1e293b;
-            --border: #e2e8f0;
-            --success: #16a34a;
-            --warning: #ca8a04;
-            --danger: #dc2626;
-        }
-        
-        body {
-            font-family: system-ui, -apple-system, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            margin: 0;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-        }
-
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 24px;
-            flex-wrap: wrap;
-            gap: 16px;
-        }
-
-        h1 {
-            margin: 0;
-            font-size: 24px;
-            color: #0f172a;
-        }
-
-        .actions {
-            display: flex;
-            gap: 10px;
-        }
-
-        button {
-            background-color: var(--primary);
-            color: white;
-            border: none;
-            padding: 10px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: background 0.2s;
-        }
-
-        button:hover {
-            background-color: var(--primary-hover);
-        }
-
-        button.btn-secondary {
-            background-color: #64748b;
-        }
-        button.btn-secondary:hover {
-            background-color: #475569;
-        }
-
-        .search-bar {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 16px;
-            box-sizing: border-box;
-        }
-
-        .card {
-            background: var(--card-bg);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            overflow: hidden;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
-        }
-
-        th {
-            background-color: #f1f5f9;
-            padding: 14px 16px;
-            font-weight: 600;
-            border-bottom: 2px solid var(--border);
-        }
-
-        td {
-            padding: 14px 16px;
-            border-bottom: 1px solid var(--border);
-            vertical-align: middle;
-        }
-
-        tr:hover {
-            background-color: #f8fafc;
-        }
-
-        .attendance-group {
-            display: inline-flex;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            overflow: hidden;
-        }
-
-        .att-btn {
-            background: #f1f5f9;
-            color: #475569;
-            border: none;
-            padding: 6px 12px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-        }
-
-        .att-btn:not(:last-child) {
-            border-right: 1px solid var(--border);
-        }
-
-        .att-btn.present.active { background-color: var(--success); color: white; }
-        .att-btn.late.active { background-color: var(--warning); color: white; }
-        .att-btn.absent.active { background-color: var(--danger); color: white; }
-
-        .score-control {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .score-btn {
-            background-color: #e2e8f0;
-            color: #0f172a;
-            border: none;
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .score-btn:hover {
-            background-color: #cbd5e1;
-        }
-
-        .score-display {
-            font-weight: bold;
-            min-width: 24px;
-            text-align: center;
-        }
-
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 44px;
-            height: 24px;
-        }
-
-        .switch input { 
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-color: #cbd5e1;
-            transition: .2s;
-            border-radius: 24px;
-        }
-
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 16px; width: 16px;
-            left: 4px; bottom: 4px;
-            background-color: white;
-            transition: .2s;
-            border-radius: 50%;
-        }
-
-        input:checked + .slider {
-            background-color: var(--success);
-        }
-
-        input:checked + .slider:before {
-            transform: translateX(20px);
-        }
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 15px; background: #f5f5f7; }
+        .student-card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .name { font-weight: bold; font-size: 1.1em; margin-bottom: 8px; }
+        .controls { display: flex; justify-content: space-between; align-items: center; }
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .btn-plus { background: #34c759; color: white; }
+        .score { font-size: 1.2em; font-weight: bold; margin: 0 10px; }
+        label { display: flex; align-items: center; gap: 5px; font-size: 0.9em; }
     </style>
 </head>
 <body>
+    <h2>Class Tracker</h2>
+    <div id="roster"></div>
 
-<div class="container">
-    <header>
-        <div>
-            <h1>Classroom Tracker App</h1>
-            <p style="color: #64748b; margin: 4px 0 0 0;">Attendance, Activity Scores, & Preparation</p>
-        </div>
-        <div class="actions">
-            <button onclick="resetDailyData()" class="btn-secondary">Reset Tracker</button>
-            <button onclick="exportCSV()">Export data (.CSV)</button>
-        </div>
-    </header>
+    <script>
+        const students = ["Badman, Isaac", "Castillo, Sofia", "Chaudhari, Allora", "Limketkai, Kenjisan", "Minnah, Aanya", "Rajendran, Diya", "Shen, Ethan", "Shih, Ryan", "Yi, Scarlett", "Zubov, Ella"];
+        const rosterDiv = document.getElementById('roster');
 
-    <input type="text" id="search" class="search-bar" placeholder="🔍 Search student name..." oninput="renderStudents()">
-
-    <div class="card">
-        <table>
-            <thead>
-                <tr>
-                    <th>Student Name</th>
-                    <th>Attendance</th>
-                    <th>Activity Score</th>
-                    <th>Prepared (Notebook)</th>
-                </tr>
-            </thead>
-            <tbody id="student-table-body">
-                <!-- Data populated by JS -->
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<script>
-    const defaultStudents = [
-        "Badman, Isaac",
-        "Castillo, Sofia",
-        "Chaudhari, Allora",
-        "Limketkai, Kenjisan",
-        "Minnah, Aanya",
-        "Rajendran, Diya",
-        "Shen, Ethan",
-        "Shih, Ryan",
-        "Yi, Scarlett",
-        "Zubov, Ella"
-    ];
-
-    // Load initial data from localStorage or create fresh objects
-    let studentData = JSON.parse(localStorage.getItem('classroom_tracker_data'));
-
-    if (!studentData) {
-        studentData = defaultStudents.map(name => ({
-            name: name,
-            attendance: 'present', // 'present', 'late', 'absent'
-            score: 0,
-            prepared: true
-        }));
-        saveData();
-    }
-
-    function saveData() {
-        localStorage.setItem('classroom_tracker_data', JSON.stringify(studentData));
-    }
-
-    function renderStudents() {
-        const query = document.getElementById('search').value.toLowerCase();
-        const tbody = document.getElementById('student-table-body');
-        tbody.innerHTML = '';
-
-        studentData.forEach((student, index) => {
-            if (!student.name.toLowerCase().includes(query)) return;
-
-            const tr = document.createElement('tr');
-
-            tr.innerHTML = `
-                <td><strong>${student.name}</strong></td>
-                <td>
-                    <div class="attendance-group">
-                        <button class="att-btn present ${student.attendance === 'present' ? 'active' : ''}" onclick="setAttendance(${index}, 'present')">P</button>
-                        <button class="att-btn late ${student.attendance === 'late' ? 'active' : ''}" onclick="setAttendance(${index}, 'late')">L</button>
-                        <button class="att-btn absent ${student.attendance === 'absent' ? 'active' : ''}" onclick="setAttendance(${index}, 'absent')">A</button>
+        students.forEach((name, index) => {
+            rosterDiv.innerHTML += `
+                <div class="student-card">
+                    <div class="name">${name}</div>
+                    <div class="controls">
+                        <label><input type="checkbox"> Present</label>
+                        <label><input type="checkbox"> Notebook</label>
+                        <div>
+                            <button class="btn btn-plus" onclick="document.getElementById('score-${index}').innerText++">+</button>
+                            <span class="score" id="score-${index}">0</span>
+                        </div>
                     </div>
-                </td>
-                <td>
-                    <div class="score-control">
-                        <button class="score-btn" onclick="updateScore(${index}, -1)">-</button>
-                        <span class="score-display">${student.score}</span>
-                        <button class="score-btn" onclick="updateScore(${index}, 1)">+</button>
-                    </div>
-                </td>
-                <td>
-                    <label class="switch">
-                        <input type="checkbox" ${student.prepared ? 'checked' : ''} onchange="togglePrepared(${index}, this.checked)">
-                        <span class="slider"></span>
-                    </label>
-                </td>
-            `;
-            tbody.appendChild(tr);
+                </div>`;
         });
-    }
-
-    function setAttendance(index, status) {
-        studentData[index].attendance = status;
-        saveData();
-        renderStudents();
-    }
-
-    function updateScore(index, delta) {
-        studentData[index].score = Math.max(0, studentData[index].score + delta);
-        saveData();
-        renderStudents();
-    }
-
-    function togglePrepared(index, isChecked) {
-        studentData[index].prepared = isChecked;
-        saveData();
-    }
-
-    function resetDailyData() {
-        if(confirm("Are you sure you want to reset all scores, attendance, and notebook check status?")) {
-            studentData = defaultStudents.map(name => ({
-                name: name,
-                attendance: 'present',
-                score: 0,
-                prepared: true
-            }));
-            saveData();
-            renderStudents();
-        }
-    }
-
-    function exportCSV() {
-        let csvContent = "data:text/csv;charset=utf-8,Student Name,Attendance,Activity Score,Prepared (Notebook)\n";
-        
-        studentData.forEach(student => {
-            const att = student.attendance.toUpperCase();
-            const prep = student.prepared ? "YES" : "NO";
-            csvContent += `"${student.name}",${att},${student.score},${prep}\n`;
-        });
-
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", "classroom_tracker_report.csv");
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-
-    // Initial load
-    renderStudents();
-</script>
-
+    </script>
 </body>
 </html>
